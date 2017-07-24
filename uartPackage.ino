@@ -25,7 +25,7 @@ void setup()
 
 void loop()
 {
-	SendData();
+	SendData(WORKING);
 	delay(100);
 }
 
@@ -67,34 +67,31 @@ void SendData(char state){
 int ReceiveData(int state){
 	unsigned char c;
 	int aimSpeedBuf,aimAngleBuf;
-	if(Serial.available() != 0){
-		if(Serial.readBytesUntil(0x5A) != 0){
-			c = Serial.read();
-			switch (c) {
-			    case : ACK
-			      SendData(ACK);
-			      connectSet = 1;
-			      break;
-
-			    case : WORKING
-			      aimSpeedBuf = int(Serial.read());
-			      c = Serial.read();
-			      aimAngleBuf = int(c*20);
-			      c += 0x5A;
-			      if(c == Serial.read()){
-			      	aimSpeed = aimSpeedBuf;
-			      	aimAngle = aimAngleBuf;
-			      }
-			      else connectSet = 0;
-			      break;
-
-			    default:
-			      // do something
-			}
-		}
-		else return 1;
+	while(1){
+		if(Serial.read() == 0x5A) break;
+		if(Serial.available() == 0) return 1;
 	}
-	else return 1;
+	c = Serial.read();
+	switch (c) {
+	    case ACK: 
+	      SendData(ACK);
+	      connectSet = 1;
+	      break;
 
+	    case WORKING: 
+	      aimSpeedBuf = int(Serial.read());
+	      c = Serial.read();
+	      aimAngleBuf = int(c*20);
+	      c += 0x5A;
+	      if(c == Serial.read()){
+	      	aimSpeed = aimSpeedBuf;
+	      	aimAngle = aimAngleBuf;
+	      }
+	      else connectSet = 0;
+	      break;
+
+	    default:
+	      break;
+	}
 	return 0;
 }
