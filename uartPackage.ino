@@ -27,7 +27,7 @@ void setup()
 void loop()
 {
 	SendData(WORKING);
-	delay(500);
+	delay(50);
   Serial1.print("state:");
   Serial1.print(connectSet);
 	if(ReceiveData() == 0){
@@ -37,7 +37,7 @@ void loop()
     Serial1.print(aimAngle);
 	}
   Serial1.println("");
-  delay(500);
+  delay(50);
 }
 
 void SendData(char state){
@@ -57,6 +57,7 @@ void SendData(char state){
 		Serial.write(BYTE0(sonar0));
 		Serial.write(BYTE0(sonar1));
 		Serial.write(BYTE0(sonar2));
+    //if(speed% 5== 0) sum++;
 		sum += BYTE0(sonar2);
 		Serial.write(sum);
 	}
@@ -69,42 +70,59 @@ void SendData(char state){
 		Serial.write(0x0);
 		Serial.write(0x0);
 		Serial.write(0x0);
-		Serial.write(0x0);
-		sum += 0x0;
+		Serial.write(0x01);
+		sum += 0x01;
 		Serial.write(sum);
 	}
 }
 
 int ReceiveData(){
-	unsigned char c;
-  char cc;
+	unsigned char c,cc;
 	int aimSpeedBuf,aimAngleBuf;
 	while(1){
 		if(Serial.read() == 0x5A) break;
 		if(Serial.available() == 0) return 1;
 	}
+  //Serial1.write(0x5A);
 	c = Serial.read();
+  //Serial1.write(c);
 	switch (c) {
 	    case ACK: 
-	      SendData(ACK);
 	      connectSet = 1;
+        c = Serial.read();
+        //Serial1.write(c);
+        c = Serial.read();
+        //Serial1.write(c);
+        c += 0x5A;
+        cc = Serial.read();
+        //Serial1.write(cc);
+        if(cc != c) connectSet = 0;
+        delay(10);
+        SendData(ACK);
 	      break;
 
 	    case WORKING: 
         c = Serial.read();
+        //Serial1.write(c);
 	      aimSpeedBuf = int(c)-127;
 	      c = Serial.read();
+        //Serial1.write(c);
 	      aimAngleBuf = int(c*20);
 	      c += 0x5A;
-	      if(c == Serial.read()){
+        cc = Serial.read();
+	      if(c == cc){
 	      	aimSpeed = aimSpeedBuf;
 	      	aimAngle = aimAngleBuf;
+          speed++;
+          connectSet = 1;
 	      }
 	      else connectSet = 0;
+        //Serial1.write(cc);
+        //Serial1.println("");
 	      break;
 
 	    default:
-        connectSet = 0;
+        //connectSet = 0;
 	      break;
 	}
 	return 0;
