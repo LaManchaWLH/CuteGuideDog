@@ -9,13 +9,15 @@
 #define WORKING 0x13
 #define ERROR1 0x14
 #define ARRIVE 0x18
+#define RCV 0x20
+#define NORTH 0x23
 
 #define BYTE0(dwTemp)       ( *( (char *)(&dwTemp)    ) )
 #define BYTE1(dwTemp)       ( *( (char *)(&dwTemp) + 1) )
 #define BYTE2(dwTemp)       ( *( (char *)(&dwTemp) + 2) )
 #define BYTE3(dwTemp)       ( *( (char *)(&dwTemp) + 3) )
 
-#define AutoCalibrateEn 0
+#define AutoCalibrateEn 1
 
 #define Stop 0
 #define Line 1
@@ -37,17 +39,17 @@
 #define echo2     49  
 /****** Parameter define ******/
 //pid for position
-#define IlenPos 10
-#define kpPos 0.19
-#define kiPos 0.0003
-#define kdPos 0.015
+#define IlenPos 8
+#define kpPos 0.22
+#define kiPos 0.00001
+#define kdPos 0.02
 //#define kpDir 0.05
 //#define kiDir 0.02/IlenPos
-#define IMaxPos 9
+#define IMaxPos 4
 //#define IMaxDir 7
 
 //for speed loop
-#define kpSpd 1.95
+#define kpSpd 2
 #define kiSpd 0.000036
 #define kdSpd 0.35
 #define IlenSpd 20
@@ -70,8 +72,8 @@
 #define dm1 188
 #define cm1 18.85
 #define trn90 213
-#define turnSpeed 3
-#define angJudge 40
+#define turnSpeed 1
+#define angJudge 30
 #define turnJudge 6
 #define posiJudge 10
 
@@ -309,6 +311,7 @@ void serialEvent1(){
     t_rightAimSpeed = 0;
     stopFlag = 1;
     workState = Stop;
+    connectSet = 0;
   }
   else if(a == 'x'){
     stopFlag = 1;
@@ -332,6 +335,7 @@ void loop()
       aimCntLeft = codeCntLeft + aim[0]*cm1;
       aimCntRight = codeCntRight + aim[0]*cm1;
       posiDif = codeCntLeft - codeCntRight;
+      Serial1.println("RCV:Line");
     }
     else if(aim[1] != 0){
       turnFlag = 1;
@@ -339,7 +343,17 @@ void loop()
       workState = Turn;
       aimCntLeft = int(float(codeCntLeft) + float(aim[1])*trn90/90);
       aimCntRight = int(float(codeCntRight) - float(aim[1])*trn90/90);
+      Serial1.println("RCV:Turn");
     }
+    else if(aim[2] != 0){
+      turnFlag = 1;
+      stopFlag = 0;
+      aimAngle = aim[2]-1;
+      aim[2] = 0;
+      workState = TurnComp;
+      Serial1.println("RCV: TurnComp");
+    }
+    SendData(RCV);
   }
   
   switch(workState){
@@ -377,6 +391,7 @@ void loop()
         pwmValLeft      = 0;
         pwmValRight     = 0;
         SendData(ARRIVE);
+        Serial1.println("ARRIVE:Line");
       }
       break;
     case Turn:
@@ -396,6 +411,7 @@ void loop()
         pwmValLeft      = 0;
         pwmValRight     = 0;
         SendData(ARRIVE);
+        Serial1.println("ARRIVE:Turn");
       }
       break;
     case TurnComp:
@@ -408,6 +424,7 @@ void loop()
         pwmValLeft      = 0;
         pwmValRight     = 0;
         SendData(ARRIVE);
+        Serial1.println("ARRIVE:TurnComp");
       }
       break;
     default:
@@ -415,14 +432,13 @@ void loop()
     break;
   }
 
-  if(connectSet == 1){
-    SendData(WORKING);
-  }
-  else{
-    SendData(HELLO);
-  }
-
   if(timeTick<millis()){
+    if(connectSet == 1){
+      //SendData(WORKING);
+    }
+    else{
+      SendData(HELLO);
+    }
     timeTick = millis()+500;
     Serial1.print("H:");
     Serial1.print(heading);
@@ -686,7 +702,14 @@ int ReceiveData(){
         //Serial1.write(cc);
         //Serial1.println("");
         return 0;
-
+      case NORTH: 
+        c = Serial.read();
+        c = Serial.read();
+        c = Serial.read();
+        c = Serial.read();
+        aim[2] = 1;
+        return 0;
+        
       default:
         //connectSet = 0;
         return 3;
